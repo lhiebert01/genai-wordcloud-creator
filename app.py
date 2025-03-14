@@ -51,10 +51,14 @@ except LookupError:
     nltk.download('punkt')
     nltk.download('stopwords')
 
-# Get OpenAI API key
-openai_api_key = os.getenv("OPENAI_API_KEY")
+# Get OpenAI API key - first try from secrets, then from environment variables
+try:
+    openai_api_key = st.secrets["openai"]["api_key"]
+except:
+    openai_api_key = os.getenv("OPENAI_API_KEY")
+
 if not openai_api_key:
-    st.error("OpenAI API key not found. Please check your .env file.")
+    st.error("OpenAI API key not found. Please check your .env file or Streamlit secrets.")
 
 # Initialize session state variables
 if 'processed_document_text' not in st.session_state:
@@ -393,24 +397,21 @@ def save_to_docx(text, filename):
         return file.read()
 
 def get_chatgpt_response(prompt):
+    """Get response from ChatGPT API."""
     try:
-        headers = {
-            "Authorization": f"Bearer {openai_api_key}",
-            "Content-Type": "application/json"
-        }
-        data = {
-            "model": "gpt-4o-mini",
-            "messages": [
-                {"role": "system", "content": "You are a helpful assistant. Provide direct answers without preambles like 'Sure!' or 'Here is...' and without conclusions like 'I hope this helps!' or 'Let me know if you need anything else.' Just provide the content that answers the question directly."},
+        client = openai.OpenAI(api_key=openai_api_key)
+        response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": prompt}
             ],
-            "max_tokens": 1000
-        }
-        response = requests.post("https://api.openai.com/v1/chat/completions", headers=headers, json=data)
-        response.raise_for_status()
-        return response.json()["choices"][0]["message"]["content"]
+            max_tokens=1000,
+            temperature=0.7
+        )
+        return response.choices[0].message.content
     except Exception as e:
-        st.error(f"Error communicating with OpenAI: {str(e)}")
+        st.error(f"Error getting response from ChatGPT: {str(e)}")
         return None
 
 # Create sidebar for customization
