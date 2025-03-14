@@ -5,6 +5,7 @@ from wordcloud import WordCloud, STOPWORDS
 import numpy as np
 from PIL import Image
 import io
+from io import BytesIO
 import base64
 import re
 import string
