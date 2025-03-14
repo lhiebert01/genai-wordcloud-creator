@@ -13,7 +13,7 @@ from nltk.corpus import stopwords
 from nltk.tokenize import word_tokenize
 from collections import Counter
 import PyPDF2
-import docx
+from docx import Document
 import time
 import os
 from dotenv import load_dotenv
@@ -210,8 +210,12 @@ def extract_text_from_pdf(file):
     return text
 
 def extract_text_from_docx(file):
-    text = docx2txt.process(file)
-    return text
+    """Extract text from a DOCX file."""
+    doc = Document(file)
+    full_text = []
+    for para in doc.paragraphs:
+        full_text.append(para.text)
+    return '\n'.join(full_text)
 
 def extract_text_from_txt(file):
     return file.getvalue().decode("utf-8")
