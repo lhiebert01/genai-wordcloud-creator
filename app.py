@@ -399,8 +399,10 @@ def save_to_docx(text, filename):
 def get_chatgpt_response(prompt):
     """Get response from ChatGPT API."""
     try:
-        client = openai.OpenAI(api_key=openai_api_key)
-        response = client.chat.completions.create(
+        import openai
+        openai.api_key = openai_api_key
+        
+        response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
