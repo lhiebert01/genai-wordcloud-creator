@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --primary-color: #3b82f6;
+  --primary-hover: #2563eb;
+  --secondary-color: #10b981;
+  --background-light: #f9fafb;
+  --text-dark: #1f2937;
+  --text-light: #6b7280;
+  --border-color: #e5e7eb;
+}
+
+body {
+  @apply bg-gray-50 text-gray-900 font-sans;
+}
+
+.card {
+  @apply bg-white shadow rounded-lg p-6 mb-6;
+}
+
+.input-field {
+  @apply mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm;
+}
+
+.btn {
+  @apply inline-flex justify-center py-2 px-4 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500;
+}
+
+.btn-secondary {
+  @apply inline-flex justify-center py-2 px-4 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500;
+}
+
+/* File Upload Styles */
+.dropzone {
+  @apply border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center transition-colors duration-300 ease-in-out;
+}
+
+.dropzone-active {
+  @apply border-indigo-500 bg-indigo-50;
+}
+
+.file-item {
+  @apply flex items-center p-3 mb-2 bg-gray-50 rounded-md border border-gray-200;
+}
+
+/* Word Cloud Styles */
+svg text:hover {
+  @apply cursor-pointer;
+}

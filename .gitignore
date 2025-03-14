@@ -1,0 +1,74 @@
+# Environment variables
+.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+venv/
+ENV/
+env/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# VS Code
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+
+# Streamlit
+# .streamlit/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Generated files
+*.docx
+*.png
+*.csv
+*.txt
+!requirements.txt
+!README.md
+
+# Logs
+*.log
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.next/
+out/
+
+# Backup files
+app_stable.py
+app_stable_final.py
+
+# Generated uploads
+uploads/
+wordcloud-app/uploads/
