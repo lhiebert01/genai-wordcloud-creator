@@ -3,7 +3,7 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from wordcloud import WordCloud, STOPWORDS
 import numpy as np
-from PIL import Image
+from PIL import Image, ImageDraw
 import io
 from io import BytesIO
 import base64
@@ -192,7 +192,9 @@ def settings_changed():
         'color_map': color_map,
         'background_color': background_color,
         'width': st.session_state.wc_width,
-        'height': st.session_state.wc_height
+        'height': st.session_state.wc_height,
+        'cloud_shape': cloud_shape,
+        'show_border': show_border
     }
     
     if 'last_settings' not in st.session_state:
@@ -237,8 +239,89 @@ def preprocess_text(text):
     
     return ' '.join(filtered_words)
 
+def create_shape_mask(shape, width, height):
+    """Create a mask image for the word cloud in the specified shape."""
+    mask = Image.new("L", (width, height), 255)  # White background
+    draw = ImageDraw.Draw(mask)
+    
+    if shape == "Cloud":
+        # Draw a cloud-like shape
+        center_x, center_y = width // 2, height // 2
+        radius_x, radius_y = width // 2 - 50, height // 2 - 50
+        
+        # Main ellipse
+        draw.ellipse([center_x - radius_x, center_y - radius_y, 
+                      center_x + radius_x, center_y + radius_y], fill=0)
+        
+        # Additional bumps to make it cloud-like
+        draw.ellipse([center_x - radius_x//2, center_y - radius_y - 30, 
+                      center_x + radius_x//2, center_y - radius_y//2], fill=0)
+        
+        draw.ellipse([center_x + radius_x//2, center_y - radius_y//2, 
+                      center_x + radius_x + 30, center_y + radius_y//2], fill=0)
+        
+        draw.ellipse([center_x - radius_x - 30, center_y - radius_y//2, 
+                      center_x - radius_x//2, center_y + radius_y//2], fill=0)
+        
+    elif shape == "Circle":
+        # Simple circle with minimal margin
+        padding = 20  # Reduced from 50
+        draw.ellipse([padding, padding, width - padding, height - padding], fill=0)
+        
+    elif shape == "Rectangle":
+        # Rectangle with rounded corners
+        padding = 50
+        draw.rectangle([padding, padding, width - padding, height - padding], fill=0)
+        
+    elif shape == "Heart":
+        # Heart shape with minimal margin
+        center_x, center_y = width // 2, height // 2
+        size = min(width, height) // 2 - 20  # Reduced from 50
+        
+        # Create a proper heart shape
+        # Define the heart as a polygon with carefully placed points
+        points = []
+        
+        # Use parametric equation for heart shape
+        # x = 16 * sin(t)^3
+        # y = 13 * cos(t) - 5 * cos(2t) - 2 * cos(3t) - cos(4t)
+        scale = size / 16  # Scale to fit our desired size
+        
+        for t in np.linspace(0, 2*np.pi, 100):
+            x = center_x + scale * 16 * np.sin(t)**3
+            # Flip the y-coordinate to make the heart right-side up
+            y = center_y - scale * (13*np.cos(t) - 5*np.cos(2*t) - 2*np.cos(3*t) - np.cos(4*t))
+            points.append((x, y))
+        
+        # Draw the heart shape
+        draw.polygon(points, fill=0)
+    
+    elif shape == "Star":
+        # Star shape with minimal margin
+        center_x, center_y = width // 2, height // 2
+        outer_radius = min(width, height) // 2 - 20  # Reduced from 50
+        inner_radius = outer_radius // 2
+        num_points = 5
+        
+        # Calculate star points
+        points = []
+        for i in range(num_points * 2):
+            radius = outer_radius if i % 2 == 0 else inner_radius
+            angle = i * 3.14159 / num_points
+            x = center_x + radius * np.sin(angle)
+            y = center_y + radius * np.cos(angle)
+            points.append((x, y))
+        
+        draw.polygon(points, fill=0)
+    
+    else:  # Default to rectangle if shape not recognized
+        padding = 50
+        draw.rectangle([padding, padding, width - padding, height - padding], fill=0)
+    
+    return np.array(mask)
+
 def generate_word_cloud(text, max_words=100, width=800, height=400, colormap='viridis', 
-                        background_color='white'):
+                        background_color='white', shape='Rectangle'):
     
     # Create word cloud
     wordcloud = WordCloud(
@@ -250,7 +333,8 @@ def generate_word_cloud(text, max_words=100, width=800, height=400, colormap='vi
         prefer_horizontal=0.9,
         collocations=True,
         min_font_size=4,
-        mode="RGB"
+        mode="RGB",
+        mask=create_shape_mask(shape, width, height)
     ).generate(text)
     
     # Save the wordcloud image to session state
@@ -283,7 +367,7 @@ def get_all_words(text, max_words=400):
     return word_counts.most_common(max_words)
 
 def display_word_cloud(text, max_words=100, width=800, height=400, colormap='viridis', 
-                      background_color='white', source_text="Document"):
+                      background_color='white', source_text="Document", shape="Rectangle", show_border=False):
     
     if not text:
         st.warning("Please enter some text or upload a document to generate a word cloud.")
@@ -295,7 +379,7 @@ def display_word_cloud(text, max_words=100, width=800, height=400, colormap='vir
         
         # Generate word cloud with current settings
         wordcloud = generate_word_cloud(
-            processed_text, max_words, width, height, colormap, background_color
+            processed_text, max_words, width, height, colormap, background_color, shape
         )
         
         # Store current source text
@@ -314,6 +398,40 @@ def display_word_cloud(text, max_words=100, width=800, height=400, colormap='vir
             
             # Display the word cloud image
             ax.imshow(wordcloud.to_array(), interpolation='bilinear')
+            
+            # Add border if requested
+            if show_border:
+                # Get shape mask
+                mask = create_shape_mask(shape, width, height)
+                
+                # Find the border pixels (where mask is 0 but neighbors include non-zero values)
+                border = np.zeros_like(mask)
+                for i in range(1, mask.shape[0]-1):
+                    for j in range(1, mask.shape[1]-1):
+                        if mask[i, j] == 0:  # If this is part of the shape
+                            # Check if any neighbor is not part of the shape
+                            if (mask[i-1:i+2, j-1:j+2] > 0).any():
+                                border[i, j] = 1  # This is a border pixel
+                
+                # Create a colormap for the border
+                cmap = plt.cm.get_cmap(colormap)
+                border_rgba = np.zeros((border.shape[0], border.shape[1], 4))
+                
+                # Set border pixels to the colormap colors
+                for i in range(border.shape[0]):
+                    for j in range(border.shape[1]):
+                        if border[i, j] > 0:
+                            # Use position in the border to determine color (creates a gradient)
+                            position = (i + j) / (border.shape[0] + border.shape[1])
+                            border_rgba[i, j] = cmap(position)
+                
+                # Create a separate border image
+                border_img = np.zeros((border.shape[0], border.shape[1], 4))
+                border_img[border > 0] = border_rgba[border > 0]
+                
+                # Overlay the border on the word cloud
+                ax.imshow(border_img, interpolation='bilinear')
+            
             ax.axis('off')
             
             # Display the figure
@@ -438,6 +556,13 @@ with st.sidebar:
              "rainbow", "jet", "turbo", "cool", "hot"],
             key="colormap"
         )
+        
+        # Shape selection
+        cloud_shape = st.selectbox(
+            "Shape",
+            ["Rectangle", "Cloud", "Circle", "Heart", "Star"],
+            key="cloud_shape"
+        )
     
     # Column 2 controls
     with col2:
@@ -446,6 +571,9 @@ with st.sidebar:
         
         # Background color
         background_color = st.color_picker("Background", "#FFFFFF", key="bg_color")
+        
+        # Border toggle
+        show_border = st.checkbox("Show Shape Border", value=False, key="show_border")
     
     # Resolution options
     st.subheader("Resolution Settings")
@@ -584,7 +712,9 @@ with document_tab:
                     height=st.session_state.wc_height,
                     colormap=color_map,
                     background_color=background_color,
-                    source_text=uploaded_file.name
+                    source_text=uploaded_file.name,
+                    shape=cloud_shape,
+                    show_border=show_border
                 )
         except Exception as e:
             st.error(f"Error processing file: {str(e)}")
@@ -666,7 +796,9 @@ with chatgpt_tab:
                     height=st.session_state.wc_height,
                     colormap=color_map,
                     background_color=background_color,
-                    source_text="ChatGPT Response"
+                    source_text="ChatGPT Response",
+                    shape=cloud_shape,
+                    show_border=show_border
                 )
 
 # Display word cloud based on source
@@ -678,7 +810,9 @@ if st.session_state.wordcloud_source == 'file' and st.session_state.processed_do
         height=st.session_state.wc_height,
         colormap=color_map,
         background_color=background_color,
-        source_text=st.session_state.uploaded_file_name
+        source_text=st.session_state.uploaded_file_name,
+        shape=cloud_shape,
+        show_border=show_border
     )
 elif st.session_state.wordcloud_source == 'chat' and st.session_state.processed_chatgpt_text:
     display_word_cloud(
@@ -688,7 +822,9 @@ elif st.session_state.wordcloud_source == 'chat' and st.session_state.processed_
         height=st.session_state.wc_height,
         colormap=color_map,
         background_color=background_color,
-        source_text="ChatGPT Response"
+        source_text="ChatGPT Response",
+        shape=cloud_shape,
+        show_border=show_border
     )
 else:
     # Display instructions
@@ -714,5 +850,7 @@ if settings_changed():
             height=st.session_state.wc_height,
             colormap=color_map,
             background_color=background_color,
-            source_text=st.session_state.current_source_text
+            source_text=st.session_state.current_source_text,
+            shape=cloud_shape,
+            show_border=show_border
         )
